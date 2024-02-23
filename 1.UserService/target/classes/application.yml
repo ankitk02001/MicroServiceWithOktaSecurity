@@ -1,0 +1,79 @@
+spring:
+  config:
+    import: optional:configserver:http://localhost:8085  #Config Server details to take configuration file from the github
+#  profile:
+#    active: prod
+  application:
+    name: USER-SERVICE
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    password: test
+    url: jdbc:mysql://localhost:3306/microservices
+    username: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+server:
+  port: 8081
+
+#implementing the resilence $j configuration
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+
+
+# to know about all this in details=https://resilience4j.readme.io/docs/circuitbreaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      ratingHotelBreaker:  #name same as given in circuit breaker
+        registerHealthIndicator: true  # to ragister health indicator
+        eventConsumerBufferSize: 10    #size of buffer
+        failureRateThreshold: 50       #if 50% is failed then circuit close to open
+        minimumNumberOfCalls: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true      # to go open to half open automatically
+        waitDurationInOpenState: 6s                              #after 6 sec move open to half open
+        permittedNumberOfCallsInHalfOpenState: 3        #when in half it send 3call if failed then again get opened
+        slidingWindowSize: 10
+        slidingWindowType: COUNT_BASED
+
+#for retry functionality (https://resilience4j.readme.io/docs/retry =to know more about it)
+  retry:
+    instances:
+      ratingHotelService:    # method name of retry method or fallback method
+        max-attempts: 3    # we try 3 times
+        wait-duration: 5s  # wait 5sec gap then try will be happened for three times
+
+#RateLimiter Configuration
+  ratelimiter:
+    instances:
+      userRateLimiter:                  # rateLimiter Name
+        limit-refresh-period: 4s        #one request then another 4sec later
+        limit-for-period: 2             #no of permissions
+        timeout-duration: 2s
+
+
+
+# we taken this properties from config server which takes from the github
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    fetch-registry: true
+#    register-with-eureka: true
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka
+
+
